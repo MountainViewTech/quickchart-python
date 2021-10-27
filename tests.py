@@ -1,7 +1,10 @@
+import os
 import unittest
 from datetime import datetime
+from unittest import mock
 
 from quickchart import QuickChart, QuickChartFunction
+
 
 class TestQuickChart(unittest.TestCase):
     def test_simple(self):
@@ -13,35 +16,29 @@ class TestQuickChart(unittest.TestCase):
             "type": "bar",
             "data": {
                 "labels": ["Hello world", "Test"],
-                "datasets": [{
-                    "label": "Foo",
-                    "data": [1, 2]
-                }]
-            }
+                "datasets": [{"label": "Foo", "data": [1, 2]}],
+            },
         }
 
         url = qc.get_url()
-        self.assertIn('w=600', url)
-        self.assertIn('h=300', url)
-        self.assertIn('devicePixelRatio=2', url)
-        self.assertIn('Hello+world', url)
+        self.assertIn("w=600", url)
+        self.assertIn("h=300", url)
+        self.assertIn("devicePixelRatio=2", url)
+        self.assertIn("Hello+world", url)
 
     def test_version(self):
         qc = QuickChart()
-        qc.version = '3.4.0'
+        qc.version = "3.4.0"
         qc.config = {
             "type": "bar",
             "data": {
                 "labels": ["Hello world", "Test"],
-                "datasets": [{
-                    "label": "Foo",
-                    "data": [1, 2]
-                }]
-            }
+                "datasets": [{"label": "Foo", "data": [1, 2]}],
+            },
         }
 
         url = qc.get_url()
-        self.assertIn('v=3.4.0', url)
+        self.assertIn("v=3.4.0", url)
 
     def test_no_chart(self):
         qc = QuickChart()
@@ -59,44 +56,58 @@ class TestQuickChart(unittest.TestCase):
             "type": "bar",
             "data": {
                 "labels": ["Hello world", "Test"],
-                "datasets": [{
-                    "label": "Foo",
-                    "data": [1, 2]
-                }]
-            }
+                "datasets": [{"label": "Foo", "data": [1, 2]}],
+            },
         }
         self.assertTrue(len(qc.get_bytes()) > 8000)
 
     def test_with_function_and_dates(self):
         qc = QuickChart()
         qc.config = {
-          "type": "bar",
-          "data": {
-            "labels": [datetime(2020, 1, 15), datetime(2021, 1, 15)],
-            "datasets": [{
-              "label": "Foo",
-              "data": [1, 2]
-            }]
-          },
-          "options": {
-            "scales": {
-              "yAxes": [{
-                "ticks": {
-                  "callback": QuickChartFunction('(val) => val + "k"')
+            "type": "bar",
+            "data": {
+                "labels": [datetime(2020, 1, 15), datetime(2021, 1, 15)],
+                "datasets": [{"label": "Foo", "data": [1, 2]}],
+            },
+            "options": {
+                "scales": {
+                    "yAxes": [
+                        {
+                            "ticks": {
+                                "callback": QuickChartFunction('(val) => val + "k"')
+                            }
+                        }
+                    ],
+                    "xAxes": [
+                        {
+                            "ticks": {
+                                "callback": QuickChartFunction('(val) => "$" + val')
+                            }
+                        }
+                    ],
                 }
-              }],
-              "xAxes": [{
-                "ticks": {
-                  "callback": QuickChartFunction('(val) => "$" + val')
-                }
-              }]
-            }
-          }
+            },
         }
 
         url = qc.get_url()
-        self.assertIn('7B%22ticks%22%3A%7B%22callback%22%3A%28val%29+%3D%3E+%22%24%22+%2B+val%7D%7D%5D%7D%7D%7D', url)
-        self.assertIn('2020-01-15T00%3A00%3A00', url)
+        self.assertIn(
+            "7B%22ticks%22%3A%7B%22callback%22%3A%28val%29+%3D%3E+%22%24%22+%2B+val%7D%7D%5D%7D%7D%7D",
+            url,
+        )
+        self.assertIn("2020-01-15T00%3A00%3A00", url)
 
-if __name__ == '__main__':
+    @mock.patch.dict(os.environ, {"QUICKCHART_BASE_URL_SCHEME": "http"})
+    @mock.patch.dict(os.environ, {"QUICKCHART_BASE_URL_HOST": "local-service:8080"})
+    def test_custom_base_url(self):
+        qc = QuickChart()
+        qc.config = {
+            "type": "bar",
+        }
+        url = qc.get_url()
+        print(qc.get_url())
+        self.assertIn("http:", url)
+        self.assertIn("local-service:8080", url)
+
+
+if __name__ == "__main__":
     unittest.main()
